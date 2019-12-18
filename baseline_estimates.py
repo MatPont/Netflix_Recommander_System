@@ -1,4 +1,4 @@
-path = "../../Datasets"
+path = ".."
 
 from scipy import io, sparse
 import numpy as np
@@ -132,4 +132,4 @@ def baseline_estimator(mat_file, l_reg=0.02, learning_rate=0.0000025):
 if __name__ == "__main__":
   
   bu_index, bi_index = pre_processing()
-  baseline_estimator(path+"/T.mat")
+  baseline_estimator(path+"/Datasets/T.mat")

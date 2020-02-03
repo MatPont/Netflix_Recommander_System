@@ -2,6 +2,7 @@ from utils import pre_processing, compute_sparse_correlation_matrix
 import numpy as np
 from scipy import io, sparse
 from math import sqrt
+from time import time
 
 
 
@@ -66,6 +67,7 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
     n_iter = 200
     cx = mat.tocoo()        
     for it in range(n_iter):
+        t0 = time()
         for u,i,v in zip(cx.row, cx.col, cx.data):
             #Rk_iu = Nk_iu = bi_index[u]
             Rk_iu = Nk_iu = np.flip(np.argsort(S[i,].toarray()))[:k].ravel()
@@ -80,7 +82,8 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
         gamma *= 0.99
 
         if it % 10 == 0:
-          print(it, "\ ", n_iter)         
+          t1 = time()
+          print(it, "\ ", n_iter, "(%.2g sec)" % (t1 - t0))
           print("compute loss...")
           print(compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi, l_reg=l_reg))
 #################################################
@@ -90,32 +93,42 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
 # Vectorized way (in work)
 #################################################
 def compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baseline_bi):
+    # Rk and Nk are list of tuple (u, i, Rk_iu/Nk_iu)
+
     no_users_entries = np.array((mat != 0).sum(1)).T.ravel()
     bu_rep = np.repeat(bu.ravel(), no_users_entries)
 
     no_movies_entries = np.array((mat != 0).sum(0)).ravel()
     bi_rep = np.repeat(bi.ravel(), no_movies_entries)
 
-    print(Rk[541])
-    input()
-
     temp_mat = sparse.csc_matrix(mat).copy()
     temp_mat.data[:] -= mu
     temp_mat.data[:] -= bi_rep
-    temp_mat.data[:] -= np.array(list(map(lambda x : 0, Rk))) #TODO
-    temp_mat.data[:] -= np.array(list(map(lambda x : cij[x[0]][x[2]] / sqrt(len(x[2])), Rk)))
+    Rk_sum = np.array(list(map(lambda x : ( (mat[x[0], x[2]].toarray().ravel() \
+                                           - (mu + baseline_bu[x[0]] + baseline_bi[0, x[2]])) \
+                                           * wij[x[1]][x[2]] ).sum() / sqrt(len(x[2])), Rk)))
+    temp_mat.data[:] -= Rk_sum
+    Nk_sum = np.array(list(map(lambda x : cij[x[1]][x[2]].sum() / sqrt(len(x[2])), Nk)))
+    temp_mat.data[:] -= Nk_sum
     temp_mat = sparse.coo_matrix(temp_mat)
     temp_mat = sparse.csr_matrix(temp_mat)
     temp_mat.data[:] -= bu_rep
 
     return temp_mat
 
-def compute_loss_vectorized(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi, l_reg=0.002):
-    loss = 0
+def compute_loss_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baseline_bi, l_reg=0.002):
+    no_nonzero_element = np.array((mat != 0).sum())
+    loss = (compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baseline_bi).data[:] ** 2).sum()
+    loss += l_reg * np.array(list(map(lambda x : (cij[x[1]][x[2]] ** 2).sum(), Nk))).sum()
+    loss += l_reg * np.array(list(map(lambda x : (wij[x[1]][x[2]] ** 2).sum(), Rk))).sum()
+    loss += no_nonzero_element * l_reg * (bu ** 2).sum()
+    loss += no_nonzero_element * l_reg * (bi ** 2).sum()
 
     return loss
 
-def correlation_based_implicit_neighbourhood_model2(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
+def correlation_based_implicit_neighbourhood_model_vectorized(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
+    gamma /= 100
+
     # subsample the matrix to make computation faster
     mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
     mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
@@ -147,21 +160,32 @@ def correlation_based_implicit_neighbourhood_model2(mat, mat_file, l_reg=0.002, 
     Rk = []
     cx = mat.tocoo()
     for u,i,v in zip(cx.row, cx.col, cx.data):
-        Rk.append((u, i, np.flip(np.argsort(S[i,].toarray()))[:k]))
+        Rk.append((u, i, np.flip(np.argsort(S[i,].toarray()))[:k].ravel()))
 
     # Train
     print("Train...")
     n_iter = 200
     for it in range(n_iter):
+        t0 = time() 
+
         e = compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Rk, cij, baseline_bu, baseline_bi)
         # Vectorized operations
         bu += gamma * (e.sum(1) - no_users_entries * l_reg * bu)
         bi += gamma * (e.sum(0) - no_movies_entries * l_reg * bi)
 
+        for u, i, Rk_iu in Rk:
+            Nk_iu = Rk_iu
+            e_ui = e[u, i]
+            buj = mu + baseline_bu[u] + baseline_bi[0, Rk_iu]
+            wij[i][Rk_iu] += gamma * ( 1 / sqrt(len(Rk_iu)) * e_ui * (mat[u, Rk_iu].toarray().ravel() - buj) - l_reg * wij[i][Rk_iu] )
+            cij[i][Nk_iu] += gamma * ( 1 / sqrt(len(Nk_iu)) * e_ui - l_reg * cij[i][Nk_iu] )
+        gamma *= 0.99
+
         if it % 10 == 0:
-          print(it, "\ ", n_iter)         
+          t1 = time()
+          print(it, "\ ", n_iter, "(%.2g sec)" % (t1 - t0))       
           print("compute loss...")
-          print(compute_loss_vectorized(mat, mu, bu, bi, l_reg=l_reg))  
+          print(compute_loss_vectorized(mat, mu, bu, bi, Rk, wij, Rk, cij, baseline_bu, baseline_bi, l_reg=l_reg))  
 #################################################
 
 
@@ -169,3 +193,4 @@ if __name__ == "__main__":
     mat_file = path+"/T.mat"
     mat = io.loadmat(mat_file)['X']
     correlation_based_implicit_neighbourhood_model(mat, mat_file)
+    #correlation_based_implicit_neighbourhood_model_vectorized(mat, mat_file)

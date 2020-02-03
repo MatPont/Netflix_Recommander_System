@@ -6,18 +6,17 @@ from math import sqrt
 
 
 # Through all this code Rk_iu and Nk_iu are the same since implicit matrix is
-#    made from the rating matrix without additional information.
+#    made from the rating matrix without additional information (i.e. indexes of
+#    non-zero elements are the same therefore neighbors too).
 
 
 #################################################
-# Naive way
+# Naive way (iterate through each r_ui)
 #################################################
 def predict_r_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi):
-    Rk_iu_sum = Nk_iu_sum = 0
-    for j in Rk_iu:
-        buj = mu + baseline_bu[u] + baseline_bi[0, j]
-        Rk_iu_sum += (mat[u, j] - buj) * wij[i][j]
-        Nk_iu_sum += cij[i][j]
+    buj = mu + baseline_bu[u] + baseline_bi[0, Rk_iu]
+    Rk_iu_sum = np.multiply((mat[u, Rk_iu] - buj), wij[i][Rk_iu]).sum()
+    Nk_iu_sum = cij[i][Rk_iu].sum()
     return mu + bu[u] + bi[0, i] + Rk_iu_sum / sqrt(len(Rk_iu)) + Nk_iu_sum / sqrt(len(Nk_iu))
 
 def compute_e_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi):
@@ -28,10 +27,8 @@ def compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_
     cx = mat.tocoo()        
     for u,i,v in zip(cx.row, cx.col, cx.data):
         r_ui_pred = predict_r_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi)
-        Rk_iu_sum = Nk_iu_sum = 0
-        for j in Rk_iu:
-            Rk_iu_sum += wij[i][j] ** 2
-            Nk_iu_sum += cij[i][j] ** 2
+        Rk_iu_sum = (wij[i][Rk_iu] ** 2).sum()
+        Nk_iu_sum = (cij[i][Rk_iu] ** 2).sum()
         loss += (mat[u, i] - r_ui_pred) ** 2 + l_reg * ((bu ** 2).sum() + (bi ** 2).sum() + Rk_iu_sum + Nk_iu_sum) 
 
     return loss
@@ -71,15 +68,15 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
     for it in range(n_iter):
         for u,i,v in zip(cx.row, cx.col, cx.data):
             #Rk_iu = Nk_iu = bi_index[u]
-            Rk_iu = Nk_iu = np.flip(np.argsort(S[i,]))[:k]
+            Rk_iu = Nk_iu = np.flip(np.argsort(S[i,].toarray()))[:k].ravel()
             e_ui = compute_e_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi)
 
             bu[u] += gamma * (e_ui - l_reg * bu[u])
             bi[0, i] += gamma * (e_ui - l_reg * bi[0, i])
-            for j in Rk_iu:
-                buj = mu + baseline_bu[u] + baseline_bi[0, j]
-                wij[i][j] += gamma * ( 1 / sqrt(len(Rk_iu)) * e_ui * (mat[u, j] - buj) - l_reg * wij[i][j] )
-                cij[i][j] += gamma * ( 1 / sqrt(len(Nk_iu)) * e_ui - l_reg * cij[i][j] )
+
+            buj = mu + baseline_bu[u] + baseline_bi[0, Rk_iu]
+            wij[i][Rk_iu] += gamma * ( 1 / sqrt(len(Rk_iu)) * e_ui * (mat[u, Rk_iu].toarray().ravel() - buj) - l_reg * wij[i][Rk_iu] )
+            cij[i][Nk_iu] += gamma * ( 1 / sqrt(len(Nk_iu)) * e_ui - l_reg * cij[i][Nk_iu] )
         gamma *= 0.99
 
         if it % 10 == 0:
@@ -99,18 +96,17 @@ def compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baselin
     no_movies_entries = np.array((mat != 0).sum(0)).ravel()
     bi_rep = np.repeat(bi.ravel(), no_movies_entries)
 
+    print(Rk[541])
+    input()
+
     temp_mat = sparse.csc_matrix(mat).copy()
     temp_mat.data[:] -= mu
     temp_mat.data[:] -= bi_rep
+    temp_mat.data[:] -= np.array(list(map(lambda x : 0, Rk))) #TODO
+    temp_mat.data[:] -= np.array(list(map(lambda x : cij[x[0]][x[2]] / sqrt(len(x[2])), Rk)))
     temp_mat = sparse.coo_matrix(temp_mat)
-    for u,i,v in zip(temp_mat.row, temp_mat.col, temp_mat.data):
-        Rk_iu = Rk[u]
-        for j in Rk_iu:
-            temp_mat
     temp_mat = sparse.csr_matrix(temp_mat)
     temp_mat.data[:] -= bu_rep
-
-    #np.array(list(map(lambda x : , temp_mat.data[:])))
 
     return temp_mat
 
@@ -120,6 +116,9 @@ def compute_loss_vectorized(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu
     return loss
 
 def correlation_based_implicit_neighbourhood_model2(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
+    # subsample the matrix to make computation faster
+    mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
 
     print(mat.shape)
     no_users = mat.shape[0]
@@ -145,11 +144,16 @@ def correlation_based_implicit_neighbourhood_model2(mat, mat_file, l_reg=0.002, 
     S.data[:] = S.data[:] / (S.data[:] + l_reg2)
     S = S * compute_sparse_correlation_matrix(mat)
 
+    Rk = []
+    cx = mat.tocoo()
+    for u,i,v in zip(cx.row, cx.col, cx.data):
+        Rk.append((u, i, np.flip(np.argsort(S[i,].toarray()))[:k]))
+
     # Train
     print("Train...")
     n_iter = 200
     for it in range(n_iter):
-        e = compute_e_vectorized()
+        e = compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Rk, cij, baseline_bu, baseline_bi)
         # Vectorized operations
         bu += gamma * (e.sum(1) - no_users_entries * l_reg * bu)
         bi += gamma * (e.sum(0) - no_movies_entries * l_reg * bi)

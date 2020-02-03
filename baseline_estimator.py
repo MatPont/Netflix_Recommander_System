@@ -1,53 +1,16 @@
-path = ".."
-
 from scipy import io, sparse
 import numpy as np
 from itertools import groupby
 from operator import itemgetter
 import pickle
 import os
+from scipy import io, sparse
+import numpy as np
+from utils import pre_processing
 
 
 
-bu_index, bi_index = [], []
-
-def pre_processing():
-    bu_index_file = path+"/bu_index.data"
-    bi_index_file = path+"/bi_index.data"
-
-    if not (os.path.isfile(bu_index_file) and os.path.isfile(bi_index_file)):
-        mat = io.loadmat(path+"/T.mat")['X']
-        """mat = mat[1:5000,1:5000]
-        mat = mat[mat.getnnz(1)>0][:,mat.getnnz(0)>0]"""
-
-        print("Pre-processing...")
-        mat_nonzero = mat.nonzero()
-
-        print("   make bi indexes...")
-        bi_index = []
-        for k, g in groupby(zip(mat_nonzero[0], mat_nonzero[1]), itemgetter(0)):
-          to_add = list(map(lambda x:int(x[1]), list(g)))
-          bi_index.append(to_add)    
-
-        print("   make bu indexes...")
-        bu_index = []
-        indexes = np.argsort(mat_nonzero[1])
-        for k, g in groupby(zip(mat_nonzero[1][indexes], mat_nonzero[0][indexes]), itemgetter(0)):
-          to_add = list(map(lambda x:int(x[1]), list(g)))
-          bu_index.append(to_add)    
-
-        with open(bi_index_file, "wb") as fp:
-            pickle.dump(bi_index, fp)
-        with open(bu_index_file, "wb") as fp:
-            pickle.dump(bu_index, fp)
-    else:
-        with open(bi_index_file, "rb") as fp:
-            bi_index = pickle.load(fp)
-        with open(bu_index_file, "rb") as fp:
-            bu_index = pickle.load(fp)
-    return bu_index, bi_index
-
-
+#################################################
 def compute_loss(mat, mu, bu, bi, l_reg=0.02):
   loss = 0
 
@@ -72,9 +35,7 @@ def compute_loss(mat, mu, bu, bi, l_reg=0.02):
   return loss
 
 
-def baseline_estimator(mat_file, l_reg=0.02, learning_rate=0.0000025):
-
-  mat = io.loadmat(mat_file)['X']
+def baseline_estimator(mat, mat_file, l_reg=0.02, learning_rate=0.0000025):
   """mat = mat[1:5000,1:5000]
   mat = mat[mat.getnnz(1)>0][:,mat.getnnz(0)>0]"""
 
@@ -82,6 +43,8 @@ def baseline_estimator(mat_file, l_reg=0.02, learning_rate=0.0000025):
   no_users = mat.shape[0]
   no_movies = mat.shape[1]
   
+  bu_index, bi_index = pre_processing(mat, mat_file)
+
   bu = np.random.rand(no_users,1)  * 2 - 1
   bi = np.random.rand(1,no_movies) * 2 - 1
   #bu = np.zeros((no_users,1))
@@ -106,22 +69,15 @@ def baseline_estimator(mat_file, l_reg=0.02, learning_rate=0.0000025):
     bi_sum = np.array(list(map(lambda x:bi.ravel()[x].sum(), bi_index))).reshape((no_users,1))
     bu_sum = np.array(list(map(lambda x:bu.ravel()[x].sum(), bu_index))).reshape((1,no_movies))    
 
+    # Vectorized operations
     bu_gradient = - 2.0 * (mat_sum1 - no_users_entries  * mu - no_users_entries  * bu - bi_sum) + 2.0 * l_reg * bu
     bu -= learning_rate * bu_gradient 
 
     bi_gradient = - 2.0 * (mat_sum0 - no_movies_entries * mu - no_movies_entries * bi - bu_sum) + 2.0 * l_reg * bi
     bi -= learning_rate * bi_gradient 
  
-    """print(bu.mean())    
-    print(bi.mean())    
-    print(bu_gradient.mean())
-    print(bi_gradient.mean())"""
     if it % 10 == 0:
       print(it, "\ ", n_iter)         
-      """print(bu)
-      print(bi)      
-      print(bu_gradient)
-      print(bi_gradient)"""
       print("compute loss...")
       print(compute_loss(mat, mu, bu, bi, l_reg=l_reg))
 
@@ -129,7 +85,8 @@ def baseline_estimator(mat_file, l_reg=0.02, learning_rate=0.0000025):
 #################################################
 
 
+
 if __name__ == "__main__":
-  
-  bu_index, bi_index = pre_processing()
-  baseline_estimator(path+"/Datasets/T.mat")
+    mat_file = path+"/T.mat"
+    mat = io.loadmat(mat_file)['X']    
+    baseline_estimator(mat, mat_file)

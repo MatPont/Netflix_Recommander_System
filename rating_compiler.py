@@ -94,4 +94,4 @@ def extract_T_and_R(D_file_name, file_name, out_T_path, out_R_path):
 if __name__ == "__main__":
     #rating_compiler2(path+"/download/training_set.tar", path+"/D.mat")
     #extract_T_and_R(path+"/D.mat", path+"/download/qualifying.txt", path+"/T.mat", path+"/R.mat")
-    extract_T_and_R(path+"/Datasets/D.mat", path+"/download/probe.txt", path+"/Datasets/T.mat", path+"/Datasets/R.mat")
+    extract_T_and_R(path+"/D.mat", path+"/download/probe.txt", path+"/T.mat", path+"/R.mat")

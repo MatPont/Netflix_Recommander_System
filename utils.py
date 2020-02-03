@@ -5,7 +5,7 @@ import os
 from sklearn.preprocessing import StandardScaler
 
 #path = "/content/drive/My Drive/M2/AFMatriciel"
-path = ".."
+path = "../Datasets"
 
 def compute_sparse_correlation_matrix(A):
     scaler = StandardScaler(with_mean=False)
@@ -21,8 +21,9 @@ def pre_processing(mat, mat_file):
     #    available for a movie
     # These indexes will help to vectorize computation of the gradient
 
-    bu_index_file = mat_file+"_bu_index2.data"
-    bi_index_file = mat_file+"_bi_index2.data"
+    shape = str(mat.shape[0])+"_"+str(mat.shape[1])
+    bu_index_file = mat_file+"_bu_index_"+shape+".data"
+    bi_index_file = mat_file+"_bi_index_"+shape+".data"
 
     if not (os.path.isfile(bu_index_file) and os.path.isfile(bi_index_file)):
         #mat = io.loadmat(mat_file)['X']
@@ -31,7 +32,7 @@ def pre_processing(mat, mat_file):
 
         print("Pre-processing...")
         mat_nonzero = mat.nonzero()
-        """cx = mat.tocoo()
+        """cx = mat.tocoo()    
         bi_index = [[]]*mat.shape[0]
         bu_index = [[]]*mat.shape[1]
         for i,j,v in zip(cx.row, cx.col, cx.data):
@@ -61,4 +62,6 @@ def pre_processing(mat, mat_file):
             bi_index = pickle.load(fp)
         with open(bu_index_file, "rb") as fp:
             bu_index = pickle.load(fp)
+
+    print("Pre-processing done.")
     return bu_index, bi_index

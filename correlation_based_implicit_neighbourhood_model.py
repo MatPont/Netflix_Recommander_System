@@ -1,7 +1,8 @@
+from utils import pre_processing, compute_sparse_correlation_matrix
 import numpy as np
 from scipy import io, sparse
 from math import sqrt
-from utils import pre_processing, compute_sparse_correlation_matrix
+
 
 
 # Through all this code Rk_iu and Nk_iu are the same since implicit matrix is
@@ -37,7 +38,7 @@ def compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_
 
 def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
     # subsample the matrix to make computation faster
-    mat = mat[0:mat.shape[0]//64, 0:mat.shape[1]//64]
+    mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
     mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
 
     print(mat.shape)
@@ -50,6 +51,7 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
 
     bu_index, bi_index = pre_processing(mat, mat_file)
     
+    # Init parameters
     bu = np.random.rand(no_users, 1)  * 2 - 1
     bi = np.random.rand(1, no_movies) * 2 - 1
     wij = np.random.rand(no_movies, no_movies) * 2 - 1
@@ -78,6 +80,7 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
                 buj = mu + baseline_bu[u] + baseline_bi[0, j]
                 wij[i][j] += gamma * ( 1 / sqrt(len(Rk_iu)) * e_ui * (mat[u, j] - buj) - l_reg * wij[i][j] )
                 cij[i][j] += gamma * ( 1 / sqrt(len(Nk_iu)) * e_ui - l_reg * cij[i][j] )
+        gamma *= 0.99
 
         if it % 10 == 0:
           print(it, "\ ", n_iter)         
@@ -87,7 +90,7 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
 
 
 #################################################
-# Vectorized way
+# Vectorized way (in work)
 #################################################
 def compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baseline_bi):
     no_users_entries = np.array((mat != 0).sum(1)).T.ravel()

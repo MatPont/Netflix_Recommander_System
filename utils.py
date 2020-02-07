@@ -1,3 +1,5 @@
+path = "../Datasets"
+
 from itertools import groupby
 from operator import itemgetter
 import pickle
@@ -5,7 +7,6 @@ import os
 from sklearn.preprocessing import StandardScaler
 
 #path = "/content/drive/My Drive/M2/AFMatriciel"
-path = "../Datasets"
 
 def compute_sparse_correlation_matrix(A):
     scaler = StandardScaler(with_mean=False)

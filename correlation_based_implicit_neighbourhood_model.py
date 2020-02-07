@@ -1,4 +1,6 @@
 from utils import pre_processing, compute_sparse_correlation_matrix
+import utils
+
 import numpy as np
 from scipy import io, sparse
 from math import sqrt
@@ -90,7 +92,10 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
 
 
 #################################################
-# Vectorized way (in work)
+# Vectorized way 
+# (Actually this version is faster but updates e_ui
+# less frequently making it less accurate for the
+# gradient descent)
 #################################################
 def compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baseline_bi):
     # Rk and Nk are list of tuple (u, i, Rk_iu/Nk_iu)

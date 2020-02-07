@@ -1,4 +1,6 @@
 from utils import pre_processing, compute_sparse_correlation_matrix
+import utils
+
 import numpy as np
 from scipy import io, sparse
 from math import sqrt, isnan

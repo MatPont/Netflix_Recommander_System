@@ -1,3 +1,5 @@
+import utils
+
 import sys
 import os
 from scipy.sparse import dok_matrix, csr_matrix

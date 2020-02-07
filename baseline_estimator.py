@@ -1,4 +1,6 @@
-from utils import pre_processing
+from utils import pre_processing, compute_sparse_correlation_matrix
+import utils
+
 from scipy import io, sparse
 import numpy as np
 
@@ -30,8 +32,9 @@ def compute_loss(mat, mu, bu, bi, l_reg=0.02):
 
 
 def baseline_estimator(mat, mat_file, l_reg=0.02, learning_rate=0.0000025):
-  """mat = mat[1:5000,1:5000]
-  mat = mat[mat.getnnz(1)>0][:,mat.getnnz(0)>0]"""
+  # subsample the matrix to make computation faster
+  mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+  mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
 
   print(mat.shape)
   no_users = mat.shape[0]
@@ -71,7 +74,6 @@ def baseline_estimator(mat, mat_file, l_reg=0.02, learning_rate=0.0000025):
     bi -= learning_rate * bi_gradient 
  
     if it % 10 == 0:
-      print(it, "\ ", n_iter)         
       print("compute loss...")
       print(compute_loss(mat, mu, bu, bi, l_reg=l_reg))
 

@@ -12,7 +12,7 @@ from math import sqrt, isnan
 
 
 #################################################
-# Naive way
+# Non-vectorized way
 #################################################
 def predict_r_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi, qi, pu, N_u, yj):
     buj = mu + baseline_bu[u] + baseline_bi[0, Rk_iu]
@@ -38,8 +38,8 @@ def compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_
 
 def integrated_model(mat, mat_file, gamma1=0.007, gamma2=0.007, gamma3=0.001, l_reg2=100, l_reg6=0.005, l_reg7=0.015, l_reg8=0.015, k=300, f=50):
     # subsample the matrix to make computation faster
-    mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
-    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
+    """mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]"""
 
     print(mat.shape)
     no_users = mat.shape[0]
@@ -94,6 +94,8 @@ def integrated_model(mat, mat_file, gamma1=0.007, gamma2=0.007, gamma3=0.001, l_
           print(it, "\ ", n_iter)         
           print("compute loss...")
           print(compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi, qi, pu, N_u, yj, l_reg6=l_reg6, l_reg7=l_reg7, l_reg8=l_reg8))
+
+    return bu, bi, qi, pu, yj, wij, cij
 #################################################
 
 

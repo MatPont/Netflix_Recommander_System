@@ -33,8 +33,8 @@ def compute_loss(mat, mu, bu, bi, l_reg=0.02):
 
 def baseline_estimator(mat, mat_file, l_reg=0.02, learning_rate=0.0000025):
   # subsample the matrix to make computation faster
-  mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
-  mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
+  """mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+  mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]"""
 
   print(mat.shape)
   no_users = mat.shape[0]

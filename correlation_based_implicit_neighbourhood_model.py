@@ -14,7 +14,7 @@ from time import time
 
 
 #################################################
-# Naive way (iterate through each r_ui)
+# Non-vectorized way (iterate through each r_ui)
 #################################################
 def predict_r_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi):
     buj = mu + baseline_bu[u] + baseline_bi[0, Rk_iu]
@@ -38,8 +38,8 @@ def compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_
 
 def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
     # subsample the matrix to make computation faster
-    mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
-    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
+    """mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]"""
 
     print(mat.shape)
     no_users = mat.shape[0]
@@ -58,6 +58,8 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
     cij = np.random.rand(no_movies, no_movies) * 2 - 1
 
     mu = mat.data[:].mean()
+
+    # Compute similarity matrix
     N = sparse.csr_matrix(mat).copy()
     N.data[:] = 1
     S = sparse.csr_matrix.dot(N.T, N)
@@ -88,11 +90,13 @@ def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, g
           print(it, "\ ", n_iter, "(%.2g sec)" % (t1 - t0))
           print("compute loss...")
           print(compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi, l_reg=l_reg))
+
+    return bu, bi, wij, cij
 #################################################
 
 
 #################################################
-# Vectorized way 
+# Vectorized way (in work)
 # (Actually this version is faster but updates e_ui
 # less frequently making it less accurate for the
 # gradient descent)
@@ -156,6 +160,8 @@ def correlation_based_implicit_neighbourhood_model_vectorized(mat, mat_file, l_r
     cij = np.random.rand(no_movies, no_movies) * 2 - 1
 
     mu = mat.data[:].mean()
+
+    # Compute similarity matrix
     N = sparse.csr_matrix(mat).copy()
     N.data[:] = 1
     S = sparse.csr_matrix.dot(N.T, N)
@@ -178,6 +184,7 @@ def correlation_based_implicit_neighbourhood_model_vectorized(mat, mat_file, l_r
         bu += gamma * (e.sum(1) - no_users_entries * l_reg * bu)
         bi += gamma * (e.sum(0) - no_movies_entries * l_reg * bi)
 
+        # TODO: vectorize the following
         for u, i, Rk_iu in Rk:
             Nk_iu = Rk_iu
             e_ui = e[u, i]
@@ -191,6 +198,8 @@ def correlation_based_implicit_neighbourhood_model_vectorized(mat, mat_file, l_r
           print(it, "\ ", n_iter, "(%.2g sec)" % (t1 - t0))       
           print("compute loss...")
           print(compute_loss_vectorized(mat, mu, bu, bi, Rk, wij, Rk, cij, baseline_bu, baseline_bi, l_reg=l_reg))  
+
+    return bu, bi, wij, cij
 #################################################
 
 

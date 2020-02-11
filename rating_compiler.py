@@ -1,11 +1,11 @@
-from utils import pre_processing, compute_sparse_correlation_matrix
-import utils
+from utils import pre_processing, compute_sparse_correlation_matrix, path
 
 import sys
 import os
-from scipy.sparse import dok_matrix, csr_matrix
+from scipy.sparse import dok_matrix, csr_matrix, lil_matrix
 from scipy import io
 import tarfile
+import numpy as np
 
 
 
@@ -26,13 +26,15 @@ def process_content(content, D):
 
 
 def rating_compiler(folder_name, out_path):
-    D = dok_matrix((total_no_users, total_no_movies))
+    #D = dok_matrix((total_no_users, total_no_movies), dtype=np.uint8)
+    D = lil_matrix((total_no_users, total_no_movies), dtype=np.uint8)
     res_listdir = os.listdir(folder_name)
     number = len(res_listdir)
     i = 0
     for f in res_listdir:
         if os.path.isfile(folder_name+f):
-            print(i, " / ", number)
+            if i % 100 == 0:
+                print(i, " / ", number)
             myfile = open(folder_name+f)
             content = myfile.read()
             myfile.close()
@@ -43,7 +45,8 @@ def rating_compiler(folder_name, out_path):
 
 
 def rating_compiler2(tar_name, out_path):
-    D = dok_matrix((total_no_users, total_no_movies))
+    #D = dok_matrix((total_no_users, total_no_movies), dtype=np.uint8)
+    D = lil_matrix((total_no_users, total_no_movies), dtype=np.uint8)
     tar = tarfile.open(tar_name)
     res_getmembers = tar.getmembers()
     number = len(res_getmembers)
@@ -51,13 +54,14 @@ def rating_compiler2(tar_name, out_path):
     for member in res_getmembers:
         f = tar.extractfile(member)
         if f is not None:    
-            print(i, " / ", number)        
+            if i % 100 == 0:
+                print(i, " / ", number)        
             content = f.read()
             f.close()
             D = process_content(content.decode(), D)
         i += 1
     tar.close()
-    D = csr_matrix(D)             
+    D = csr_matrix(D, dtype=np.float64)
     io.savemat(out_path, {'X' : D})
 
 
@@ -95,6 +99,6 @@ def extract_T_and_R(D_file_name, file_name, out_T_path, out_R_path):
 
 #################################################
 if __name__ == "__main__":
-    #rating_compiler2(path+"/download/training_set.tar", path+"/D.mat")
+    rating_compiler2(path+"/download/training_set.tar", path+"/D.mat")
     #extract_T_and_R(path+"/D.mat", path+"/download/qualifying.txt", path+"/T.mat", path+"/R.mat")
     extract_T_and_R(path+"/D.mat", path+"/download/probe.txt", path+"/T.mat", path+"/R.mat")

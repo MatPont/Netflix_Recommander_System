@@ -1,16 +1,10 @@
-from utils import pre_processing, compute_sparse_correlation_matrix
-import utils
+from utils import pre_processing, compute_sparse_correlation_matrix, path
 
 import numpy as np
 from scipy import io, sparse
 from math import sqrt
 from time import time
 
-
-
-# Through all this code Rk_iu and Nk_iu are the same since implicit matrix is
-#    made from the rating matrix without additional information (i.e. indexes of
-#    non-zero elements are the same therefore neighbors too).
 
 
 #################################################

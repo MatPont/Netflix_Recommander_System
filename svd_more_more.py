@@ -1,5 +1,4 @@
-from utils import pre_processing, compute_sparse_correlation_matrix
-import utils
+from utils import pre_processing, compute_sparse_correlation_matrix, path
 
 import numpy as np
 from scipy import io, sparse

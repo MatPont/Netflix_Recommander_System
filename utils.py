@@ -6,7 +6,7 @@ import pickle
 import os
 from sklearn.preprocessing import StandardScaler
 
-#path = "/content/drive/My Drive/M2/AFMatriciel"
+path = "/content/drive/My Drive/M2/AFMatriciel"
 
 def compute_sparse_correlation_matrix(A):
     scaler = StandardScaler(with_mean=False)

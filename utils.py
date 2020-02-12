@@ -5,8 +5,9 @@ from operator import itemgetter
 import pickle
 import os
 from sklearn.preprocessing import StandardScaler
+import numpy as np
 
-path = "/content/drive/My Drive/M2/AFMatriciel"
+#path = "/content/drive/My Drive/M2/AFMatriciel/Datasets"
 
 def compute_sparse_correlation_matrix(A):
     scaler = StandardScaler(with_mean=False)
@@ -20,7 +21,7 @@ def pre_processing(mat, mat_file):
     #    the jth element is a list storing the indexes of movies rated by user j
     # bu_index is the same but storing the indexes of users whose rating is 
     #    available for a movie
-    # These indexes will help to vectorize computation of the gradient
+    # These indexes will help to the algorithms computation
 
     shape = str(mat.shape[0])+"_"+str(mat.shape[1])
     bu_index_file = mat_file+"_bu_index_"+shape+".data"

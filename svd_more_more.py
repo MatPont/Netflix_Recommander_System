@@ -28,8 +28,8 @@ def compute_loss(mat, mu, bu, bi, qi, pu, N_u, yj, l_reg6=0.005, l_reg7=0.015):
 
 def svd_more_more(mat, mat_file, gamma1=0.007, gamma2=0.007, gamma3=0.001, l_reg2=100, l_reg6=0.005, l_reg7=0.015, f=50):
     # subsample the matrix to make computation faster
-    """mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
-    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]"""
+    mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
 
     print(mat.shape)
     no_users = mat.shape[0]

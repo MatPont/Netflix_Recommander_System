@@ -37,8 +37,8 @@ def compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_
 
 def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
     # subsample the matrix to make computation faster
-    """mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
-    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]"""
+    mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
 
     print(mat.shape)
     no_users = mat.shape[0]

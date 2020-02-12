@@ -17,8 +17,8 @@ def predict_r_ui(mat, u, i, mu, S, Sk_iu, baseline_bu, baseline_bi):
 
 def correlation_based_neighbourhood_model(mat, mat_file, l_reg2=100.0, k=250):
     # subsample the matrix to make computation faster
-    """mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
-    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]"""
+    mat = mat[0:mat.shape[0]//128, 0:mat.shape[1]//128]
+    mat = mat[mat.getnnz(1)>0][:, mat.getnnz(0)>0]
 
     print(mat.shape)
     no_users = mat.shape[0]
@@ -47,9 +47,16 @@ def correlation_based_neighbourhood_model(mat, mat_file, l_reg2=100.0, k=250):
     for u,i,v in zip(cx.row, cx.col, cx.data):
         Sk_iu = np.flip(np.argsort(S[i,].toarray()))[:k].ravel()
         r_ui = predict_r_ui(mat, u, i, mu, S, Sk_iu, baseline_bu, baseline_bi)
-        r_ui_mat.append((u, i, r_ui))
+        r_ui_mat.append((u, i, r_ui[0]))
 
-    return r_ui_mat
+    data = list(map(lambda x: x[2], r_ui_mat))
+    col = list(map(lambda x: x[1], r_ui_mat))
+    row = list(map(lambda x: x[0], r_ui_mat))
+    r_ui_pred = sparse.csr_matrix((data, (row, col)), shape=mat.shape)
+
+    print((mat - r_ui_pred).sum())
+
+    return r_ui_pred
 
 #################################################
 

@@ -6,6 +6,8 @@ Implementation of 5 methods of recommander system on Netflix data.
 * SVD++ ( *svd_more_more.py* )
 * Integrated Model ( *integrated_model.py* )
 
+Models are described in [[Koren, 2008] Factorization Meets the Neighborhood: a Multifaceted Collaborative Filtering Model](https://www.cs.rochester.edu/twiki/pub/Main/HarpSeminar/Factorization_Meets_the_Neighborhood-_a_Multifaceted_Collaborative_Filtering_Model.pdf).
+
 # How to use scripts
 The default dataset path is "../Datasets" (relative path from the root of this repository), it can be modified in utils.py.
 

@@ -24,10 +24,10 @@ def compute_loss(mat, mu, bu, bi, l_reg=0.02):
 
   loss = (temp_mat.data[:] ** 2).sum()
 
-  reg = l_reg * ((bu**2).sum() + (bi**2).sum())  
-  loss += reg
+  loss_reg = l_reg * ((bu**2).sum() + (bi**2).sum())  
+  #loss += loss_reg
 
-  return loss
+  return loss, loss+loss_reg
 
 
 def baseline_estimator(mat, mat_file, l_reg=0.02, learning_rate=0.0000025):

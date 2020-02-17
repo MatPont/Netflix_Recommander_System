@@ -26,14 +26,16 @@ def compute_e_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, bas
 
 def compute_loss(mat, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi, l_reg=0.002):
     loss = 0
+    loss_reg = 0
     cx = mat.tocoo()        
     for u,i,v in zip(cx.row, cx.col, cx.data):
         r_ui_pred = predict_r_ui(mat, u, i, mu, bu, bi, Rk_iu, wij, Nk_iu, cij, baseline_bu, baseline_bi)
         Rk_iu_sum = (wij[i][Rk_iu] ** 2).sum()
         Nk_iu_sum = (cij[i][Rk_iu] ** 2).sum()
-        loss += (mat[u, i] - r_ui_pred) ** 2 + l_reg * ((bu ** 2).sum() + (bi ** 2).sum() + Rk_iu_sum + Nk_iu_sum) 
+        loss += (mat[u, i] - r_ui_pred) ** 2 
+        loss_reg += l_reg * ((bu ** 2).sum() + (bi ** 2).sum() + Rk_iu_sum + Nk_iu_sum) 
 
-    return loss
+    return loss, loss+loss_reg
 
 def correlation_based_implicit_neighbourhood_model(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
     # subsample the matrix to make computation faster
@@ -127,12 +129,12 @@ def compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baselin
 def compute_loss_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baseline_bi, l_reg=0.002):
     no_nonzero_element = np.array((mat != 0).sum())
     loss = (compute_e_vectorized(mat, mu, bu, bi, Rk, wij, Nk, cij, baseline_bu, baseline_bi).data[:] ** 2).sum()
-    loss += l_reg * np.array(list(map(lambda x : (cij[x[1]][x[2]] ** 2).sum(), Nk))).sum()
-    loss += l_reg * np.array(list(map(lambda x : (wij[x[1]][x[2]] ** 2).sum(), Rk))).sum()
-    loss += no_nonzero_element * l_reg * (bu ** 2).sum()
-    loss += no_nonzero_element * l_reg * (bi ** 2).sum()
+    loss_reg = l_reg * np.array(list(map(lambda x : (cij[x[1]][x[2]] ** 2).sum(), Nk))).sum()
+    loss_reg += l_reg * np.array(list(map(lambda x : (wij[x[1]][x[2]] ** 2).sum(), Rk))).sum()
+    loss_reg += no_nonzero_element * l_reg * (bu ** 2).sum()
+    loss_reg += no_nonzero_element * l_reg * (bi ** 2).sum()
 
-    return loss
+    return loss, loss+loss_reg
 
 def correlation_based_implicit_neighbourhood_model_vectorized(mat, mat_file, l_reg=0.002, gamma=0.005, l_reg2=100.0, k=250):
     gamma /= 100

@@ -18,13 +18,15 @@ def compute_e_ui(mat, u, i, mu, bu, bi, qi, pu, N_u, yj):
 
 def compute_loss(mat, mu, bu, bi, qi, pu, N_u, yj, l_reg6=0.005, l_reg7=0.015):
     loss = 0
+    loss_reg = 0
     cx = mat.tocoo()
     for u,i,v in zip(cx.row, cx.col, cx.data):
         r_ui_pred = predict_r_ui(mat, u, i, mu, bu, bi, qi, pu, N_u, yj)
-        loss += (mat[u, i] - r_ui_pred) ** 2 + l_reg6 * ((bu ** 2).sum() + (bi ** 2).sum())
-        loss += l_reg7 * ((qi[i]**2).sum() + (pu[u]**2).sum() + (yj[N_u]**2).sum())
+        loss += (mat[u, i] - r_ui_pred) ** 2 
+        loss_reg += l_reg6 * ((bu ** 2).sum() + (bi ** 2).sum())
+        loss_reg += l_reg7 * ((qi[i]**2).sum() + (pu[u]**2).sum() + (yj[N_u]**2).sum())
 
-    return loss
+    return loss, loss+loss_reg
 
 def svd_more_more(mat, mat_file, gamma1=0.007, gamma2=0.007, gamma3=0.001, l_reg2=100, l_reg6=0.005, l_reg7=0.015, f=50):
     # subsample the matrix to make computation faster
